@@ -18,7 +18,8 @@ def get_canteens():
         result[row['name']] = []
     rows = read_rows("""
         SELECT canteens.name AS canteen_name, shops.name AS shop_name
-        FROM shops JOIN canteens USING(canteen_id) ORDER BY shops.shop_id
+        FROM shops JOIN canteens USING(canteen_id)
+        WHERE shops.is_active = 1 ORDER BY shops.shop_id
     """)
     for row in rows:
         result[row['canteen_name']].append(row['shop_name'])
@@ -28,7 +29,7 @@ def get_canteens():
 def get_shop(canteen_name, shop_name):
     rows = read_rows("""
         SELECT shops.* FROM shops JOIN canteens USING(canteen_id)
-        WHERE canteens.name = ? AND shops.name = ?
+        WHERE canteens.name = ? AND shops.name = ? AND shops.is_active = 1
     """, (canteen_name, shop_name))
     if not rows:
         raise ValueError('ไม่พบร้านในโรงอาหารนี้')
@@ -59,19 +60,42 @@ def get_menu_data(canteen_name, shop_name):
     options = {}
     for row in read_rows('SELECT * FROM menu_options WHERE shop_id = ? ORDER BY option_id', (shop['shop_id'],)):
         options.setdefault(row['group_name'], {})[row['name']] = row['extra_price']
+    variants = {}
+    for row in read_rows('''
+        SELECT menu_items.name AS menu_name, menu_variants.*
+        FROM menu_variants JOIN menu_items USING(menu_id)
+        WHERE menu_items.shop_id = ? ORDER BY variant_id
+    ''', (shop['shop_id'],)):
+        choices = variants.setdefault(row['menu_name'], {})
+        if row['is_available']:
+            choices[row['name']] = row['price']
+    for name, choices in variants.items():
+        if name in menus:
+            if choices:
+                menus[name] = min(choices.values())
+            else:
+                del menus[name]
+    item_options = {}
+    for row in read_rows('''
+        SELECT menu_items.name AS menu_name, menu_item_options.*
+        FROM menu_item_options JOIN menu_items USING(menu_id)
+        WHERE menu_items.shop_id = ? ORDER BY option_id
+    ''', (shop['shop_id'],)):
+        groups = item_options.setdefault(row['menu_name'], {})
+        groups.setdefault(row['group_name'], {})[row['name']] = row['extra_price']
     curry_shops = {shop_name: curry} if shop['shop_type'] == 'curry' else {}
-    return curry_shops, {shop_name: menus}, {shop_name: options}
+    return curry_shops, {shop_name: menus}, {shop_name: options}, variants, item_options
 
 
 def check_cart_item(item):
     from Backend import menu
 
     data = get_menu_data(item['canteen'], item['shop'])
-    curry_shops, menus, options = data
+    curry_shops, menus, options, variants, item_options = data
     shop_name = item['shop']
     error = 'เมนูหรือตัวเลือกหมด/เปลี่ยนราคา กรุณาลบรายการเดิมแล้วเลือกใหม่'
     try:
-        if shop_name in curry_shops:
+        if shop_name in curry_shops and item['menu'] not in menus[shop_name]:
             count = None
             for number in curry_shops[shop_name]['prices']:
                 if item['menu'] == f'ข้าวราดแกง {number} อย่าง':
@@ -92,7 +116,7 @@ def check_cart_item(item):
                 if group in selected:
                     raise ValueError(error)
                 selected[group] = choice
-            if set(selected) != set(options[shop_name]):
+            if set(selected) != set(menu.get_option_groups(shop_name, item['menu'], data)):
                 raise ValueError(error)
             price = menu.calculate_price(shop_name, item['menu'], selected_options=selected, menu_data=data)
         if price != item['price']:

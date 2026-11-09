@@ -19,9 +19,10 @@ SUCCESS = "#237A45"
 
 
 class LoginPage(ctk.CTkFrame):
-    def __init__(self, parent, on_login):
+    def __init__(self, parent, on_login, role="customer"):
         super().__init__(parent, fg_color="transparent")
         self.on_login = on_login
+        self.role = role
         self.register = False
         self._build_layout()
         self.show_form()
@@ -81,12 +82,24 @@ class LoginPage(ctk.CTkFrame):
         entry.pack(fill="x")
         return entry
 
+    def choose_role(self, value):
+        self.role = 'shop' if value == 'ร้านค้า' else 'customer'
+        self.show_form()
+
     def show_form(self, register=False):
         for widget in self.form_content.winfo_children():
             widget.destroy()
 
+        if self.role == 'shop':
+            register = False
         self.register = register
-        title = "สร้างบัญชีใหม่" if register else "เข้าสู่ระบบ"
+        self.role_picker = ctk.CTkSegmentedButton(
+            self.form_content, values=['ลูกค้า', 'ร้านค้า'], command=self.choose_role,
+            selected_color=ORANGE, selected_hover_color=ORANGE_HOVER,
+        )
+        self.role_picker.set('ร้านค้า' if self.role == 'shop' else 'ลูกค้า')
+        self.role_picker.pack(fill='x', pady=(0, 12))
+        title = "สร้างบัญชีใหม่" if register else ("เข้าสู่ระบบร้านค้า" if self.role == "shop" else "เข้าสู่ระบบลูกค้า")
         subtitle = (
             "สมัครสมาชิกเพื่อเริ่มสั่งอาหารจากร้านโปรด"
             if register else "เข้าสู่ระบบเพื่อสั่งอาหารได้สะดวกยิ่งขึ้น"
@@ -156,7 +169,11 @@ class LoginPage(ctk.CTkFrame):
             text_color=ORANGE,
             font=ctk.CTkFont(size=13, weight="bold"),
         )
-        self.switch_button.pack(fill="x")
+        if self.role == 'customer':
+            self.switch_button.pack(fill="x")
+        else:
+            ctk.CTkLabel(self.form_content, text='ใช้บัญชีร้านค้าที่ผู้ดูแลสร้างและผูกกับร้านไว้',
+                         text_color=MUTED).pack(pady=6)
 
         self.username_entry.bind("<Return>", lambda _event: self.password_entry.focus_set())
         self.password_entry.bind("<Return>", lambda _event: self.submit())
@@ -185,6 +202,10 @@ class LoginPage(ctk.CTkFrame):
                 return
 
             user = users.login(username, password)
+            if user['role'] != self.role:
+                users.logout()
+                raise ValueError('บัญชีนี้เป็นบัญชีร้านค้า กรุณาเลือกฝั่งร้านค้า' if user['role'] == 'shop'
+                                 else 'บัญชีนี้เป็นบัญชีลูกค้า กรุณาเลือกฝั่งลูกค้า')
         except ValueError as error:
             self.error_label.configure(text=str(error), text_color=ERROR)
         except sqlite3.Error as error:

@@ -18,7 +18,7 @@ class ShopAccountWindow(ctk.CTk):
         try:
             shops = catalog.read_rows('''
                 SELECT shops.shop_id, canteens.name AS canteen, shops.name AS shop
-                FROM shops JOIN canteens USING(canteen_id) ORDER BY shops.shop_id
+                FROM shops JOIN canteens USING(canteen_id) WHERE shops.is_active=1 ORDER BY shops.shop_id
             ''')
             for shop in shops:
                 label = f"{shop['shop_id']}: {shop['canteen']} / {shop['shop']}"

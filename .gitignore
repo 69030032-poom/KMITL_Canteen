@@ -7,3 +7,5 @@ outputs/backups/
 *.db-shm
 assets/payment_qr.png
 *.sqbpro
+
+outputs/menu_review/

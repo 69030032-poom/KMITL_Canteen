@@ -3,6 +3,7 @@ import sqlite3
 from functools import partial
 
 import customtkinter as ctk
+from Frontend.auto_refresh_frame import AutoRefreshFrame
 
 from Backend import order_history
 from Backend.shop_orders import status_names
@@ -12,7 +13,7 @@ DARK = "#242424"
 MUTED = "#777777"
 
 
-class OrderHistoryPage(ctk.CTkFrame):
+class OrderHistoryPage(AutoRefreshFrame):
     def __init__(self, parent, go_back, order_id=None):
         super().__init__(parent, fg_color="transparent")
         self.go_back = go_back
@@ -43,9 +44,10 @@ class OrderHistoryPage(ctk.CTkFrame):
         return button
 
     def show_orders(self):
+        self.refresh_page = self.show_orders
         self.clear()
         self.add_text("คำสั่งซื้อของฉัน", size=21, bold=True, pady=(12, 4))
-        self.add_text("ตรวจสอบสถานะและรายละเอียดคำสั่งซื้อของคุณ", size=14, color=MUTED, pady=(0, 8))
+        self.add_text("สถานะอัปเดตอัตโนมัติทุก 3 วินาที", size=14, color=MUTED, pady=(0, 8))
         actions = ctk.CTkFrame(self, fg_color="transparent")
         actions.pack(fill="x", padx=12, pady=(0, 10))
         ctk.CTkButton(actions, text="รีเฟรชรายการ", command=self.show_orders, height=38, width=170, corner_radius=9, fg_color=ORANGE, hover_color="#DF4B20", font=ctk.CTkFont(size=14)).pack(side="left", padx=5)
@@ -54,7 +56,7 @@ class OrderHistoryPage(ctk.CTkFrame):
             rows = order_history.read_orders()
         except (sqlite3.Error, ValueError):
             self.add_text("อ่านข้อมูลไม่สำเร็จ กรุณาลองรีเฟรชอีกครั้ง", size=15, color="#C0392B")
-            return
+            return False
         if not rows:
             empty = ctk.CTkFrame(self, fg_color="#FFFFFF", corner_radius=14, border_width=1, border_color="#EAEAEA")
             empty.pack(fill="x", padx=12, pady=10)
@@ -71,6 +73,7 @@ class OrderHistoryPage(ctk.CTkFrame):
             ctk.CTkButton(frame, text="ดูรายละเอียด", command=partial(self.show_details, order['order_id']), height=38, width=200, corner_radius=9, fg_color=ORANGE, hover_color="#DF4B20", font=ctk.CTkFont(size=14)).pack(anchor="w", padx=18, pady=(6, 14))
 
     def show_details(self, order_id):
+        self.refresh_page = partial(self.show_details, order_id)
         self.clear()
         top = ctk.CTkFrame(self, fg_color="transparent")
         top.pack(fill="x", pady=(6, 10))
@@ -80,7 +83,7 @@ class OrderHistoryPage(ctk.CTkFrame):
             order, items = order_history.read_details(order_id)
         except (sqlite3.Error, ValueError):
             self.add_text("อ่านข้อมูลไม่สำเร็จ กรุณาลองรีเฟรชอีกครั้ง", size=15, color="#C0392B")
-            return
+            return False
         if order is None:
             self.add_text("ไม่พบคำสั่งซื้อนี้", size=16)
             return
@@ -111,4 +114,4 @@ class OrderHistoryPage(ctk.CTkFrame):
             if item['note']:
                 self.add_text('หมายเหตุ: ' + item['note'], size=13, color=MUTED, parent=card, pady=2)
         self.add_text(f'ยอดรวม {total} บาท', size=19, bold=True, color=ORANGE, parent=card, pady=(12, 4))
-        self.add_text('กดรีเฟรชสถานะเพื่ออ่านข้อมูลล่าสุดจากร้าน', size=13, color=MUTED, parent=card, pady=(2, 16))
+        self.add_text('สถานะอัปเดตอัตโนมัติทุก 3 วินาที', size=13, color=MUTED, parent=card, pady=(2, 16))

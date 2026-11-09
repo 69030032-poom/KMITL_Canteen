@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from functools import partial
 from pathlib import Path
 from tkinter import messagebox
@@ -16,8 +18,9 @@ from Frontend.order_history_page import OrderHistoryPage
 class CanteenApp(ctk.CTk):
     """Main window for the KMITL Canteen desktop application."""
 
-    def __init__(self):
+    def __init__(self, role="customer"):
         super().__init__()
+        self.login_role = role
         self.title("KMITL Canteen")
         self.geometry("1200x760")
         self.minsize(900, 600)
@@ -106,7 +109,18 @@ class CanteenApp(ctk.CTk):
             self.content, fg_color="transparent", corner_radius=0,
         )
         self.page_frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.second_window_button = ctk.CTkButton(
+            self.sidebar, text='เปิดอีกหน้าต่าง', command=self.open_second_window,
+        )
         self.show_login()
+
+    def open_second_window(self):
+        role = 'shop' if self.current_user['role'] == 'customer' else 'customer'
+        root = Path(__file__).resolve().parent.parent
+        try:
+            subprocess.Popen([sys.executable, str(root / 'main.py'), '--role', role], cwd=root)
+        except OSError as error:
+            messagebox.showerror('เปิดหน้าต่างไม่ได้', str(error), parent=self)
 
     def show_login(self):
         users.logout()
@@ -118,10 +132,16 @@ class CanteenApp(ctk.CTk):
         self.clear_page()
         self.page_title_label.configure(text="ยินดีต้อนรับ")
         self.profile_label.configure(text="👤")
-        LoginPage(self.page_frame, self.login_finished).pack(fill="x", padx=12, pady=12)
+        LoginPage(self.page_frame, self.login_finished, self.login_role).pack(fill="x", padx=12, pady=12)
 
     def login_finished(self, user):
         self.current_user = user
+        self.login_role = user['role']
+        for button in self.nav_buttons.values():
+            button.pack_forget()
+        self.second_window_button.configure(text='เปิดหน้าต่างลูกค้า' if user['role'] == 'shop' else 'เปิดหน้าต่างร้านค้า')
+        self.second_window_button.pack(side='bottom', fill='x', padx=12, pady=8)
+        self.title('KMITL Canteen — ' + ('ร้านค้า' if user['role'] == 'shop' else 'ลูกค้า'))
         self.profile_label.configure(text=f"👤  {user['display_name']}")
         self.sidebar.pack(side="left", fill="y", padx=(0, 12))
         if user['role'] == 'shop':
@@ -132,6 +152,8 @@ class CanteenApp(ctk.CTk):
             self.logout_button.pack(side="bottom", fill="x", padx=12, pady=16)
             self.show_shop_orders()
         else:
+            for label in ('โรงอาหาร', 'ร้านค้า'):
+                self.nav_buttons[label].pack(fill='x', padx=12, pady=5)
             self.shop_button.pack_forget()
             self.cart_button.pack(fill="x", padx=12, pady=5)
             self.favorites_button.pack(fill="x", padx=12, pady=5)

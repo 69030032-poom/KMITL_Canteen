@@ -27,7 +27,7 @@ class MenuPage(ctk.CTkFrame):
         self.go_back = go_back
         self.is_favorite = False
         self.menu_data = catalog.get_menu_data(self.canteen_name, self.shop_name)
-        self.curry_shops, self.menus, self.shop_options = self.menu_data
+        self.curry_shops, self.menus, self.shop_options, self.variants, self.item_options = self.menu_data
         self._build_layout()
         self.show_menu_list()
 
@@ -146,6 +146,8 @@ class MenuPage(ctk.CTkFrame):
             widget.destroy()
 
     def show_menu_list(self):
+        self.menu_data = catalog.get_menu_data(self.canteen_name, self.shop_name)
+        self.curry_shops, self.menus, self.shop_options, self.variants, self.item_options = self.menu_data
         self._clear_menu_panel()
         ctk.CTkLabel(
             self.menu_panel, text="เมนูทั้งหมด",
@@ -155,23 +157,17 @@ class MenuPage(ctk.CTkFrame):
         rows = ctk.CTkScrollableFrame(self.menu_panel, fg_color="transparent", corner_radius=0)
         rows.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
+        has_curry = False
         if self.shop_name in self.curry_shops:
-            prices = self.curry_shops[self.shop_name]["prices"]
-            dishes = self.curry_shops[self.shop_name]["dishes"]
-            if not prices or not dishes:
-                ctk.CTkLabel(
-                    rows, text="วันนี้ยังไม่มีเมนูพร้อมขาย", text_color=MUTED,
-                ).pack(pady=20)
-                return
-            self._make_menu_row(rows, "ข้าวราดแกง", min(prices.values()), curry=True)
-        else:
-            shop_menus = self.menus.get(self.shop_name, {})
-            if not shop_menus:
-                ctk.CTkLabel(
-                    rows, text="วันนี้ยังไม่มีเมนูพร้อมขาย", text_color=MUTED,
-                ).pack(pady=20)
-            for menu_name, price in shop_menus.items():
-                self._make_menu_row(rows, menu_name, price)
+            shop = self.curry_shops[self.shop_name]
+            has_curry = bool(shop['prices'] and shop['dishes'])
+            if has_curry:
+                self._make_menu_row(rows, 'ข้าวราดแกง', min(shop['prices'].values()), curry=True)
+        shop_menus = self.menus.get(self.shop_name, {})
+        for menu_name, price in shop_menus.items():
+            self._make_menu_row(rows, menu_name, price)
+        if not has_curry and not shop_menus:
+            ctk.CTkLabel(rows, text='วันนี้ยังไม่มีเมนูพร้อมขาย', text_color=MUTED).pack(pady=20)
 
     def _make_menu_row(self, parent, menu_name, price, curry=False):
         row = ctk.CTkFrame(
@@ -223,7 +219,7 @@ class MenuPage(ctk.CTkFrame):
 
         self.details_area = ctk.CTkScrollableFrame(self.menu_panel, fg_color="transparent")
         self.details_area.pack(fill="both", expand=True, padx=12, pady=4)
-        if self.shop_name in self.curry_shops:
+        if self.shop_name in self.curry_shops and menu_name == "ข้าวราดแกง":
             self.show_curry_options(self.details_area)
         else:
             self.show_regular_menu(self.details_area, menu_name)
@@ -237,7 +233,7 @@ class MenuPage(ctk.CTkFrame):
         price = menu.calculate_price(self.shop_name, menu_name, menu_data=self.menu_data)
         ctk.CTkLabel(parent, text=f"ราคาเริ่มต้น {price} บาท", text_color=MUTED).pack(pady=6)
         self.menu_choices[menu_name] = {}
-        for group_name, choices in self.shop_options.get(self.shop_name, {}).items():
+        for group_name, choices in menu.get_option_groups(self.shop_name, menu_name, self.menu_data).items():
             if not choices:
                 continue
             ctk.CTkLabel(
@@ -249,6 +245,8 @@ class MenuPage(ctk.CTkFrame):
             self.menu_choices[menu_name][group_name] = choice_variable
             for choice, extra_price in choices.items():
                 choice_text = choice + (f" (+{extra_price} บาท)" if extra_price > 0 else "")
+                if group_name == 'รูปแบบ' and menu_name in self.variants:
+                    choice_text = f"{choice} — {self.variants[menu_name][choice]} บาท"
                 ctk.CTkRadioButton(
                     parent, text=choice_text, variable=choice_variable, value=choice,
                     command=partial(self.update_regular_price, menu_name),
@@ -259,6 +257,7 @@ class MenuPage(ctk.CTkFrame):
             font=ctk.CTkFont(size=14, weight="bold"), text_color=ORANGE,
         )
         self.menu_price_labels[menu_name].pack(pady=10)
+        self.update_regular_price(menu_name)
         note_entry = ctk.CTkEntry(
             parent, placeholder_text="หมายเหตุถึงร้าน (ไม่บังคับ)", height=36,
         )

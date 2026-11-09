@@ -4,11 +4,12 @@ from functools import partial
 from tkinter import messagebox
 
 import customtkinter as ctk
+from Frontend.auto_refresh_frame import AutoRefreshFrame
 
 from Backend import users, shop_orders
 
 
-class ShopOrdersPage(ctk.CTkFrame):
+class ShopOrdersPage(AutoRefreshFrame):
     def __init__(self, parent, go_back):
         super().__init__(parent, fg_color="transparent")
         self.go_back = go_back
@@ -39,15 +40,17 @@ class ShopOrdersPage(ctk.CTkFrame):
         self.show_orders()
 
     def show_orders(self):
+        self.refresh_page = self.show_orders
         self.clear()
         self.label(f'{self.canteen} / {self.shop}')
+        self.label('อัปเดตอัตโนมัติทุก 3 วินาที')
         self.button('รีเฟรชรายการ', self.show_orders)
         self.button('ออกจากระบบ', self.go_back)
         try:
             rows = shop_orders.read_orders(self.canteen, self.shop)
         except (sqlite3.Error, ValueError):
             self.label('อ่านออเดอร์ไม่สำเร็จ กรุณาลองใหม่')
-            return
+            return False
         if not rows:
             self.label('ยังไม่มีออเดอร์ของร้านนี้')
         for order in rows:
@@ -56,6 +59,7 @@ class ShopOrdersPage(ctk.CTkFrame):
             self.button(text, partial(self.show_details, order['order_id']))
 
     def show_details(self, order_id):
+        self.refresh_page = partial(self.show_details, order_id)
         self.clear()
         self.button('กลับรายการออเดอร์', self.show_orders)
         try:
@@ -67,7 +71,7 @@ class ShopOrdersPage(ctk.CTkFrame):
             items = shop_orders.read_items(order_id, self.canteen, self.shop)
         except (sqlite3.Error, ValueError):
             self.label('อ่านรายละเอียดไม่สำเร็จ กรุณาลองใหม่')
-            return
+            return False
         self.label(f"ออเดอร์ #{order_id} — {self.shop}")
         self.label(f"ผู้รับ: {order['customer_name']} | โทร: {order['phone']}")
         self.label(f"รับวันที่ {order['pickup_date']} เวลา {order['pickup_time']}")
@@ -97,6 +101,13 @@ class ShopOrdersPage(ctk.CTkFrame):
             self.button(actions[target], partial(self.update_status, order_id, status, target))
 
     def update_status(self, order_id, old_status, new_status):
+        self.refresh_paused = True
+        try:
+            self.confirm_status_change(order_id, old_status, new_status)
+        finally:
+            self.refresh_paused = False
+
+    def confirm_status_change(self, order_id, old_status, new_status):
         if new_status == 'paid':
             confirmed = messagebox.askyesno(
                 'ยืนยันการตรวจรับเงิน',

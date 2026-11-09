@@ -53,5 +53,24 @@ CREATE TABLE IF NOT EXISTS shops (
             canteen_id INTEGER NOT NULL REFERENCES canteens(canteen_id),
             name TEXT NOT NULL,
             shop_type TEXT NOT NULL DEFAULT 'regular',
+            is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
             UNIQUE(canteen_id, name)
         );
+
+CREATE TABLE IF NOT EXISTS menu_variants (
+    variant_id INTEGER PRIMARY KEY,
+    menu_id INTEGER NOT NULL REFERENCES menu_items(menu_id),
+    name TEXT NOT NULL,
+    price INTEGER NOT NULL CHECK(typeof(price) = 'integer' AND price >= 0),
+    is_available INTEGER NOT NULL DEFAULT 1 CHECK(is_available IN (0, 1)),
+    UNIQUE(menu_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS menu_item_options (
+    option_id INTEGER PRIMARY KEY,
+    menu_id INTEGER NOT NULL REFERENCES menu_items(menu_id),
+    group_name TEXT NOT NULL,
+    name TEXT NOT NULL,
+    extra_price INTEGER NOT NULL DEFAULT 0 CHECK(extra_price >= 0),
+    UNIQUE(menu_id, group_name, name)
+);
