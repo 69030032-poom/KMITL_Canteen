@@ -4,6 +4,22 @@ from datetime import datetime
 from Backend import checkout, database, catalog, users
 
 
+def cancel_order(order_id):
+    user = users.require_user('customer')
+    connection = database.connect_database()
+    try:
+        with connection:
+            cursor = connection.execute("""
+                UPDATE orders SET status = 'cancelled'
+                WHERE order_id = ? AND user_id = ?
+                  AND status = 'awaiting_payment_review'
+            """, (order_id, user['user_id']))
+            if cursor.rowcount != 1:
+                raise ValueError('ยกเลิกไม่ได้: ไม่พบคำสั่งซื้อของคุณ หรือสถานะเปลี่ยนแล้ว กรุณาตรวจสอบสถานะล่าสุด')
+    finally:
+        connection.close()
+
+
 def check_items(canteen_name, shop_name, items):
     if not items:
         raise ValueError("ตะกร้าว่าง กรุณาเพิ่มอาหารก่อน")

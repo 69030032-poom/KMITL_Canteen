@@ -8,6 +8,7 @@ import customtkinter as ctk
 from PIL import Image
 
 from Backend import cart, catalog, users
+from Frontend.theme import add_canteen_art
 from Frontend.login_page import LoginPage
 from Frontend.menu_page import MenuPage
 from Frontend.checkout_page import CheckoutPage
@@ -19,12 +20,16 @@ class CanteenApp(ctk.CTk):
     """Main window for the KMITL Canteen desktop application."""
 
     def __init__(self, role="customer"):
+        ctk.set_appearance_mode("light")
         super().__init__()
+        icon_file = Path(__file__).resolve().parent.parent / "assets" / "app_icon" / "canteen_icon_v2.ico"
+        if sys.platform == "win32" and icon_file.exists():
+            self.iconbitmap(str(icon_file))
         self.login_role = role
         self.title("KMITL Canteen")
-        self.geometry("1200x760")
+        self.geometry("1240x720")
         self.minsize(900, 600)
-        self.configure(fg_color="#F7F7F7")
+        self.configure(fg_color="#FFF8F0")
 
         self.canteens = {}
         self.cart = []
@@ -32,27 +37,23 @@ class CanteenApp(ctk.CTk):
         self.last_page = self.show_canteens
 
         # Header
-        self.header = ctk.CTkFrame(self, fg_color="#FFFFFF", corner_radius=0, height=72)
+        self.header = ctk.CTkFrame(self, fg_color="#C94716", corner_radius=0, height=72)
         self.header.pack(fill="x")
         self.header.pack_propagate(False)
         brand = ctk.CTkFrame(self.header, fg_color="transparent")
         brand.pack(side="left", padx=24, pady=12)
-        ctk.CTkLabel(brand, text="KMITL", text_color="#F45B2A",
+        ctk.CTkLabel(brand, text="KMITL", text_color="#FFFFFF",
                      font=ctk.CTkFont(size=25, weight="bold")).pack(side="left")
-        ctk.CTkLabel(brand, text=" Canteen", text_color="#242424",
+        ctk.CTkLabel(brand, text=" Canteen", text_color="#FFFFFF",
                      font=ctk.CTkFont(size=23, weight="bold")).pack(side="left")
-        self.search_entry = ctk.CTkEntry(
-            self.header, placeholder_text="⌕  ค้นหาร้านหรือเมนู...", width=270,
-            height=38, corner_radius=18, border_color="#E7E7E7", fg_color="#FFFFFF",
-        )
-        self.search_entry.pack(side="right", padx=(8, 24), pady=16)
         self.profile_label = ctk.CTkLabel(self.header, text="👤", font=ctk.CTkFont(size=22))
+        self.profile_label.configure(text_color="#FFFFFF")
         self.profile_label.pack(side="right", padx=12)
 
         # Body: left navigation and page content
-        self.body = ctk.CTkFrame(self, fg_color="#F7F7F7", corner_radius=0)
+        self.body = ctk.CTkFrame(self, fg_color="#FFF8F0", corner_radius=0)
         self.body.pack(fill="both", expand=True)
-        self.sidebar = ctk.CTkFrame(self.body, width=205, fg_color="#FFFFFF", corner_radius=0)
+        self.sidebar = ctk.CTkFrame(self.body, width=180, fg_color="#FFFFFF", corner_radius=0)
         self.sidebar.pack(side="left", fill="y", padx=(0, 12))
         self.sidebar.pack_propagate(False)
         self.nav_buttons = {}
@@ -95,10 +96,10 @@ class CanteenApp(ctk.CTk):
         )
         self.logout_button = ctk.CTkButton(
             self.sidebar, text="ออกจากระบบ", command=self.show_login,
-            height=38, corner_radius=10, fg_color="#F45B2A", hover_color="#DF4B20",
+            height=38, corner_radius=10, fg_color="#C94716", hover_color="#A93810",
         )
 
-        self.content = ctk.CTkFrame(self.body, fg_color="#F7F7F7", corner_radius=0)
+        self.content = ctk.CTkFrame(self.body, fg_color="#FFF8F0", corner_radius=0)
         self.content.pack(side="right", fill="both", expand=True, padx=(8, 22), pady=18)
         self.page_title_label = ctk.CTkLabel(
             self.content, text="", font=ctk.CTkFont(size=25, weight="bold"),
@@ -111,7 +112,12 @@ class CanteenApp(ctk.CTk):
         self.page_frame.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self.second_window_button = ctk.CTkButton(
             self.sidebar, text='เปิดอีกหน้าต่าง', command=self.open_second_window,
+            fg_color='#FCE6D7', text_color='#28231F', hover_color='#F5D5BF',
         )
+        self.workspace = ctk.CTkFrame(self.content, fg_color='#FFF8F0', corner_radius=0)
+        self.sidebar_art = add_canteen_art(self.sidebar, width=176, height=150)
+        if self.sidebar_art:
+            self.sidebar_art.pack(side='bottom', pady=12)
         self.show_login()
 
     def open_second_window(self):
@@ -156,12 +162,19 @@ class CanteenApp(ctk.CTk):
                 self.nav_buttons[label].pack(fill='x', padx=12, pady=5)
             self.shop_button.pack_forget()
             self.cart_button.pack(fill="x", padx=12, pady=5)
-            self.favorites_button.pack(fill="x", padx=12, pady=5)
+            # Favorites are hidden until persistent storage is implemented.
             self.history_button.pack(fill="x", padx=12, pady=5)
             self.logout_button.pack(side="bottom", fill="x", padx=12, pady=16)
             self.show_canteens()
 
     def clear_page(self):
+        self.workspace.pack_forget()
+        for widget in self.workspace.winfo_children():
+            widget.destroy()
+        self.page_frame.pack_forget()
+        self.page_title_label.pack_forget()
+        self.page_title_label.pack(fill='x', padx=12, pady=(8,14))
+        self.page_frame.pack(fill='both', expand=True, padx=8, pady=(0,8))
         # ลบเนื้อหาหน้าเดิม ก่อนแสดงหน้าใหม่
         for widget in self.page_frame.winfo_children():
             widget.destroy()
@@ -176,7 +189,7 @@ class CanteenApp(ctk.CTk):
 
         intro = ctk.CTkLabel(
             self.page_frame, text="ค้นหาร้านอาหารอร่อย ๆ ภายใน สจล.",
-            text_color="#777777", font=ctk.CTkFont(size=14), anchor="w",
+            text_color="#6F6258", font=ctk.CTkFont(size=14), anchor="w",
         )
         intro.pack(fill="x", padx=8, pady=(0, 16))
 
@@ -189,7 +202,7 @@ class CanteenApp(ctk.CTk):
         if not self.canteens:
             ctk.CTkLabel(
                 grid, text="ยังไม่มีข้อมูลโรงอาหารในฐานข้อมูล",
-                text_color="#777777", font=ctk.CTkFont(size=15),
+                text_color="#6F6258", font=ctk.CTkFont(size=15),
             ).grid(row=0, column=0, padx=8, pady=8, sticky="w")
             return
 
@@ -204,7 +217,7 @@ class CanteenApp(ctk.CTk):
             banner.pack(fill="x", padx=8, pady=(8, 4))
             banner.pack_propagate(False)
             ctk.CTkLabel(
-                banner, text="🏫", font=ctk.CTkFont(size=42), text_color="#F45B2A",
+                banner, text="🏫", font=ctk.CTkFont(size=42), text_color="#C94716",
             ).pack(expand=True)
             ctk.CTkLabel(
                 card, text=canteen_name, font=ctk.CTkFont(size=17, weight="bold"),
@@ -212,11 +225,11 @@ class CanteenApp(ctk.CTk):
             ).pack(fill="x", padx=12, pady=(8, 3))
             ctk.CTkLabel(
                 card, text=f"{len(shops)} ร้านอาหาร", font=ctk.CTkFont(size=12),
-                text_color="#777777", anchor="w",
+                text_color="#6F6258", anchor="w",
             ).pack(fill="x", padx=12, pady=(0, 10))
             ctk.CTkButton(
                 card, text="ดูร้านค้า", height=36, corner_radius=9,
-                fg_color="#F45B2A", hover_color="#DF4B20",
+                fg_color="#C94716", hover_color="#A93810",
                 font=ctk.CTkFont(size=13, weight="bold"),
                 command=partial(self.show_shops, canteen_name),
             ).pack(fill="x", padx=12, pady=(0, 12))
@@ -226,8 +239,8 @@ class CanteenApp(ctk.CTk):
         for label, button in self.nav_buttons.items():
             active = label == active_label
             button.configure(
-                fg_color="#F45B2A" if active else "transparent",
-                hover_color="#DF4B20" if active else "#FFF0E9",
+                fg_color="#C94716" if active else "transparent",
+                hover_color="#A93810" if active else "#FFF0E9",
                 text_color="#FFFFFF" if active else "#333333",
             )
 
@@ -286,7 +299,7 @@ class CanteenApp(ctk.CTk):
         else:
             ctk.CTkLabel(
                 image_area, text="🍜", font=ctk.CTkFont(size=42),
-                text_color="#F45B2A",
+                text_color="#C94716",
             ).pack(expand=True)
 
         ctk.CTkLabel(
@@ -295,11 +308,11 @@ class CanteenApp(ctk.CTk):
         ).pack(fill="x", padx=12, pady=(8, 2))
         ctk.CTkLabel(
             card, text=canteen_name, font=ctk.CTkFont(size=12),
-            text_color="#777777", anchor="w",
+            text_color="#6F6258", anchor="w",
         ).pack(fill="x", padx=12, pady=(0, 8))
         ctk.CTkButton(
             card, text="ดูเมนู  →", height=34, corner_radius=9,
-            fg_color="#F45B2A", hover_color="#DF4B20",
+            fg_color="#C94716", hover_color="#A93810",
             font=ctk.CTkFont(size=13, weight="bold"),
             command=partial(self.show_menu, canteen_name, shop_name),
         ).pack(fill="x", padx=10, pady=(0, 10))
@@ -329,7 +342,7 @@ class CanteenApp(ctk.CTk):
         if not shops:
             ctk.CTkLabel(
                 self.page_frame, text="ยังไม่มีร้านค้าในโรงอาหารนี้",
-                text_color="#777777",
+                text_color="#6F6258",
             ).pack(pady=16)
             return
 
@@ -354,7 +367,7 @@ class CanteenApp(ctk.CTk):
         if not self.canteens or not any(self.canteens.values()):
             ctk.CTkLabel(
                 self.page_frame, text="ยังไม่มีข้อมูลร้านค้าในฐานข้อมูล",
-                text_color="#777777", font=ctk.CTkFont(size=15),
+                text_color="#6F6258", font=ctk.CTkFont(size=15),
             ).pack(pady=20)
             return
 
@@ -385,15 +398,21 @@ class CanteenApp(ctk.CTk):
         self.clear_page()
         # The redesigned MenuPage contains its own shop title and back button.
         self.page_title_label.configure(text="")
+        self.page_title_label.pack_forget()
 
+        self.page_frame.pack_forget()
+        self.workspace.pack(fill='both', expand=True)
         menu_page = MenuPage(
-            self.page_frame,
+            self.workspace,
             canteen_name,
             shop_name,
             partial(self.add_to_cart, canteen_name, shop_name),
             partial(self.show_shops, canteen_name),
+            self.show_cart,
+            lambda: (cart.get_total_quantity(cart.get_shop_items(self.cart, canteen_name, shop_name)),
+                     cart.get_total_price(cart.get_shop_items(self.cart, canteen_name, shop_name))),
         )
-        menu_page.pack(fill="x")
+        menu_page.pack(fill='both', expand=True)
 
     def add_to_cart(self, canteen_name, shop_name, menu_name, price, options, note):
         cart.add_item(self.cart, canteen_name, shop_name, menu_name, price, options, note)
@@ -472,7 +491,7 @@ class CanteenApp(ctk.CTk):
         ).pack(side="left")
         ctk.CTkButton(
             heading, text="▤  ล้างตะกร้า", width=112, height=30, corner_radius=8,
-            fg_color="transparent", hover_color="#FFF0E9", text_color="#F45B2A",
+            fg_color="transparent", hover_color="#FFF0E9", text_color="#C94716",
             command=self.clear_cart,
         ).pack(side="right")
 
@@ -481,11 +500,11 @@ class CanteenApp(ctk.CTk):
             empty.pack(fill="x", padx=8, pady=8)
             ctk.CTkLabel(
                 empty, text="ตะกร้ายังว่างอยู่", font=ctk.CTkFont(size=16),
-                text_color="#777777",
+                text_color="#6F6258",
             ).pack(pady=28)
             ctk.CTkButton(
                 self.page_frame, text="เลือกอาหาร", height=42, corner_radius=9,
-                fg_color="#F45B2A", hover_color="#DF4B20",
+                fg_color="#C94716", hover_color="#A93810",
                 command=self.show_all_shops,
             ).pack(fill="x", padx=8, pady=8)
             return
@@ -507,7 +526,7 @@ class CanteenApp(ctk.CTk):
                 image_label.image = image
             else:
                 ctk.CTkLabel(
-                    image_box, text="🍜", font=ctk.CTkFont(size=27), text_color="#F45B2A",
+                    image_box, text="🍜", font=ctk.CTkFont(size=27), text_color="#C94716",
                 ).pack(expand=True)
 
             details = ctk.CTkFrame(row, fg_color="transparent")
@@ -518,17 +537,17 @@ class CanteenApp(ctk.CTk):
             ).pack(fill="x", pady=(3, 0))
             ctk.CTkLabel(
                 details, text=f"{item['price']} บาท", font=ctk.CTkFont(size=13, weight="bold"),
-                text_color="#F45B2A", anchor="w",
+                text_color="#C94716", anchor="w",
             ).pack(fill="x")
             if item.get("options"):
                 ctk.CTkLabel(
                     details, text=", ".join(item["options"]), font=ctk.CTkFont(size=10),
-                    text_color="#777777", anchor="w", wraplength=260,
+                    text_color="#6F6258", anchor="w", wraplength=260,
                 ).pack(fill="x")
             if item.get("note"):
                 ctk.CTkLabel(
                     details, text=f"หมายเหตุ: {item['note']}", font=ctk.CTkFont(size=10),
-                    text_color="#777777", anchor="w", wraplength=260,
+                    text_color="#6F6258", anchor="w", wraplength=260,
                 ).pack(fill="x")
 
             controls = ctk.CTkFrame(row, fg_color="transparent")
@@ -545,12 +564,12 @@ class CanteenApp(ctk.CTk):
             ).pack(side="left", padx=1)
             ctk.CTkButton(
                 controls, text="+", width=28, height=30, corner_radius=6,
-                fg_color="#F5F5F5", hover_color="#EAEAEA", text_color="#F45B2A",
+                fg_color="#F5F5F5", hover_color="#EAEAEA", text_color="#C94716",
                 command=partial(self.increase_quantity, item),
             ).pack(side="left", padx=1)
             ctk.CTkButton(
                 controls, text="♜", width=28, height=30, corner_radius=6,
-                fg_color="transparent", hover_color="#FFF0E9", text_color="#777777",
+                fg_color="transparent", hover_color="#FFF0E9", text_color="#6F6258",
                 command=partial(self.remove_item, item),
             ).pack(side="left", padx=(8, 0))
 
@@ -574,7 +593,7 @@ class CanteenApp(ctk.CTk):
             canteen_name, shop_name = shops[0]
             ctk.CTkButton(
                 self.page_frame, text="สั่งอาหาร", height=42, corner_radius=9,
-                fg_color="#F45B2A", hover_color="#DF4B20",
+                fg_color="#C94716", hover_color="#A93810",
                 font=ctk.CTkFont(size=14, weight="bold"),
                 command=partial(self.show_checkout, canteen_name, shop_name),
             ).pack(fill="x", padx=8, pady=(8, 12))
@@ -582,7 +601,7 @@ class CanteenApp(ctk.CTk):
             ctk.CTkLabel(
                 self.page_frame,
                 text="มีอาหารจากหลายร้าน กรุณาสั่งแยกตามร้าน",
-                font=ctk.CTkFont(size=12), text_color="#777777",
+                font=ctk.CTkFont(size=12), text_color="#6F6258",
             ).pack(anchor="w", padx=8, pady=(8, 4))
             for canteen_name, shop_name in shops:
                 shop_items = cart.get_shop_items(self.cart, canteen_name, shop_name)
@@ -590,7 +609,7 @@ class CanteenApp(ctk.CTk):
                 ctk.CTkButton(
                     self.page_frame,
                     text=f"สั่งอาหาร — {shop_name} ({shop_total} บาท)",
-                    height=38, corner_radius=9, fg_color="#F45B2A", hover_color="#DF4B20",
+                    height=38, corner_radius=9, fg_color="#C94716", hover_color="#A93810",
                     command=partial(self.show_checkout, canteen_name, shop_name),
                 ).pack(fill="x", padx=8, pady=4)
 
@@ -628,7 +647,7 @@ class CanteenApp(ctk.CTk):
         card.pack(fill="x", padx=18, pady=18)
         ctk.CTkLabel(
             card, text="✓", font=ctk.CTkFont(size=42, weight="bold"),
-            text_color="#F45B2A",
+            text_color="#C94716",
         ).pack(pady=(24, 4))
         ctk.CTkLabel(
             card, text="ส่งคำสั่งซื้อเรียบร้อยแล้ว",
@@ -636,7 +655,7 @@ class CanteenApp(ctk.CTk):
         ).pack(pady=5)
         ctk.CTkLabel(
             card, text=f"เลขคำสั่งซื้อ  #{order_id}",
-            font=ctk.CTkFont(size=18, weight="bold"), text_color="#F45B2A",
+            font=ctk.CTkFont(size=18, weight="bold"), text_color="#C94716",
         ).pack(pady=5)
         ctk.CTkLabel(
             card, text=f"{canteen_name} / {shop_name}",
@@ -645,13 +664,13 @@ class CanteenApp(ctk.CTk):
         ctk.CTkLabel(
             card,
             text="รับแจ้งชำระแล้ว รอตรวจสอบเงินเข้า\nยังไม่ยืนยันการชำระเงินหรือส่งให้ร้านทำอาหาร",
-            font=ctk.CTkFont(size=15), text_color="#777777", justify="center",
+            font=ctk.CTkFont(size=15), text_color="#6F6258", justify="center",
         ).pack(pady=(8, 18))
         ctk.CTkButton(
             card, text="ติดตามคำสั่งซื้อนี้",
             command=partial(self.show_order_history, order_id),
             width=280, height=42, corner_radius=10,
-            fg_color="#F45B2A", hover_color="#DF4B20",
+            fg_color="#C94716", hover_color="#A93810",
             font=ctk.CTkFont(size=15, weight="bold"),
         ).pack(pady=6)
         ctk.CTkButton(
@@ -671,7 +690,7 @@ class CanteenApp(ctk.CTk):
         ctk.CTkLabel(
             self.page_frame,
             text="เมนูโปรดของคุณจะแสดงที่นี่",
-            text_color="#777777",
+            text_color="#6F6258",
             font=ctk.CTkFont(size=15),
         ).pack(pady=24)
 
@@ -679,8 +698,10 @@ class CanteenApp(ctk.CTk):
         users.require_user('shop')
         self.clear_page()
         self.page_title_label.configure(text="จัดการออเดอร์ร้านค้า")
-        page = ShopOrdersPage(self.page_frame, self.show_login)
-        page.pack(fill="x")
+        self.page_frame.pack_forget()
+        self.workspace.pack(fill='both', expand=True)
+        page = ShopOrdersPage(self.workspace, self.show_login)
+        page.pack(fill='both', expand=True)
 
     def show_order_history(self, order_id=None):
         users.require_user('customer')

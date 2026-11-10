@@ -1,11 +1,12 @@
 import json
 import sqlite3
 from functools import partial
+from tkinter import messagebox
 
 import customtkinter as ctk
 from Frontend.auto_refresh_frame import AutoRefreshFrame
 
-from Backend import order_history
+from Backend import order_history, orders
 from Backend.shop_orders import status_names
 
 ORANGE = "#F45B2A"
@@ -98,6 +99,12 @@ class OrderHistoryPage(AutoRefreshFrame):
             self.add_text('กรุณาติดต่อร้านเพื่อตรวจสอบยอดที่แจ้งชำระ อย่าโอนซ้ำก่อนตรวจสอบ', size=14, color="#C0392B", parent=card)
         elif order['status'] == 'awaiting_payment_review':
             self.add_text('ร้านยังไม่ได้ยืนยันเงินเข้า', size=14, color="#9A5B00", parent=card)
+            ctk.CTkButton(card, text='ยกเลิกคำสั่งซื้อ', height=38,
+                fg_color='#FCE6D7', text_color='#9E3210', hover_color='#F5D5BF',
+                command=partial(self.cancel_order, order_id)).pack(anchor='w', padx=18, pady=8)
+        elif order['status'] == 'cancelled':
+            self.add_text('หากโอนเงินแล้ว กรุณาติดต่อร้านเพื่อตรวจสอบและขอคืนเงิน ระบบไม่คืนเงินอัตโนมัติ',
+                          size=14, color='#9A5B00', parent=card)
         self.add_text("รายการอาหาร", size=17, bold=True, parent=card, pady=(12, 4))
         total = 0
         for item in items:
@@ -115,3 +122,22 @@ class OrderHistoryPage(AutoRefreshFrame):
                 self.add_text('หมายเหตุ: ' + item['note'], size=13, color=MUTED, parent=card, pady=2)
         self.add_text(f'ยอดรวม {total} บาท', size=19, bold=True, color=ORANGE, parent=card, pady=(12, 4))
         self.add_text('สถานะอัปเดตอัตโนมัติทุก 3 วินาที', size=13, color=MUTED, parent=card, pady=(2, 16))
+
+    def cancel_order(self, order_id):
+        self.refresh_paused = True
+        try:
+            confirmed = messagebox.askyesno(
+                'ยกเลิกคำสั่งซื้อ',
+                f'ต้องการยกเลิกคำสั่งซื้อ #{order_id} ใช่ไหม?\n'
+                'หากโอนเงินแล้ว ต้องติดต่อร้านเพื่อขอคืนเงิน ระบบไม่คืนเงินอัตโนมัติ',
+                parent=self,
+            )
+            if not confirmed:
+                return
+            try:
+                orders.cancel_order(order_id)
+            except (ValueError, sqlite3.Error) as error:
+                messagebox.showerror('ยกเลิกไม่สำเร็จ', str(error), parent=self)
+            self.show_details(order_id)
+        finally:
+            self.refresh_paused = False

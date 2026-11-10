@@ -11,6 +11,7 @@ status_names = {
     'preparing': 'กำลังเตรียมอาหาร',
     'ready': 'พร้อมรับอาหาร',
     'completed': 'รับอาหารแล้ว',
+    'cancelled': 'ลูกค้ายกเลิกคำสั่งซื้อ',
 }
 
 next_statuses = {

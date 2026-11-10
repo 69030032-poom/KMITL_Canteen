@@ -4,6 +4,7 @@ import customtkinter as ctk
 
 from Backend import cart, checkout, orders, catalog
 from Frontend.date_picker import DatePicker
+from Frontend.theme import ORANGE, ORANGE_HOVER, TEXT, PEACH, BORDER
 from Frontend.payment_page import PaymentPage
 
 
@@ -47,7 +48,7 @@ class CheckoutPage(ctk.CTkFrame):
         review_button = ctk.CTkButton(
             self.form_frame,
             text="ตรวจรายการก่อนสั่ง", height=42, width=260, corner_radius=10,
-            fg_color="#F45B2A", hover_color="#DF4B20", font=ctk.CTkFont(size=15, weight="bold"),
+            fg_color="#C94716", hover_color="#A93810", font=ctk.CTkFont(size=15, weight="bold"),
             command=self.check_form,
         )
         review_button.pack(pady=(8, 6))
@@ -65,7 +66,7 @@ class CheckoutPage(ctk.CTkFrame):
         date_label.pack(pady=(8, 0))
         self.date_button = ctk.CTkButton(
             self.form_frame, text="เลือกวันจากปฏิทิน", width=400, height=40, corner_radius=9, font=ctk.CTkFont(size=14),
-            command=self.open_calendar,
+            command=self.open_calendar, fg_color=PEACH, hover_color="#F5D5BF", text_color=TEXT, border_width=1, border_color=BORDER,
         )
         self.date_button.pack(pady=4)
 
@@ -75,10 +76,10 @@ class CheckoutPage(ctk.CTkFrame):
         time_frame.pack(pady=4)
         hours = [f"{hour:02d}" for hour in range(24)]
         minutes = [f"{minute:02d}" for minute in range(60)]
-        self.hour_menu = ctk.CTkOptionMenu(time_frame, values=hours, width=180, height=38, font=ctk.CTkFont(size=14))
+        self.hour_menu = ctk.CTkOptionMenu(time_frame, values=hours, fg_color=PEACH, button_color=ORANGE, button_hover_color=ORANGE_HOVER, text_color=TEXT, dropdown_fg_color="white", dropdown_text_color=TEXT, dropdown_hover_color=PEACH, width=180, height=38, font=ctk.CTkFont(size=14))
         self.hour_menu.set("ชั่วโมง")
         self.hour_menu.pack(side="left", padx=4)
-        self.minute_menu = ctk.CTkOptionMenu(time_frame, values=minutes, width=180, height=38, font=ctk.CTkFont(size=14))
+        self.minute_menu = ctk.CTkOptionMenu(time_frame, values=minutes, fg_color=PEACH, button_color=ORANGE, button_hover_color=ORANGE_HOVER, text_color=TEXT, dropdown_fg_color="white", dropdown_text_color=TEXT, dropdown_hover_color=PEACH, width=180, height=38, font=ctk.CTkFont(size=14))
         self.minute_menu.set("นาที")
         self.minute_menu.pack(side="left", padx=4)
 
@@ -155,7 +156,7 @@ class CheckoutPage(ctk.CTkFrame):
         self.save_error_label.pack(pady=10)
         self.confirm_button = ctk.CTkButton(
             self.review_frame, text="ไปหน้าชำระเงิน", width=260, height=42, corner_radius=10,
-            fg_color="#F45B2A", hover_color="#DF4B20", font=ctk.CTkFont(size=15, weight="bold"), command=self.show_payment,
+            fg_color="#C94716", hover_color="#A93810", font=ctk.CTkFont(size=15, weight="bold"), command=self.show_payment,
         )
         self.confirm_button.pack(pady=(10, 6))
 
