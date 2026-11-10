@@ -1,9 +1,11 @@
 import sqlite3
+import sys
 from pathlib import Path
 
 
 project_folder = Path(__file__).resolve().parent.parent
-database_file = project_folder / "Database SQLite" / "canteen.db"
+database_folder = Path(sys.executable).parent if getattr(sys, 'frozen', False) else project_folder
+database_file = database_folder / "Database SQLite" / "canteen.db"
 
 
 def connect_database():

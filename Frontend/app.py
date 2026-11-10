@@ -126,7 +126,8 @@ class CanteenApp(ctk.CTk):
         role = 'shop' if self.current_user['role'] == 'customer' else 'customer'
         root = Path(__file__).resolve().parent.parent
         try:
-            subprocess.Popen([sys.executable, str(root / 'main.py'), '--role', role], cwd=root)
+            command = [sys.executable] if getattr(sys, 'frozen', False) else [sys.executable, str(root / 'main.py')]
+            subprocess.Popen(command + ['--role', role], cwd=Path(sys.executable).parent if getattr(sys, 'frozen', False) else root)
         except OSError as error:
             messagebox.showerror('เปิดหน้าต่างไม่ได้', str(error), parent=self)
 
