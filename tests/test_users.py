@@ -37,12 +37,16 @@ class AccountTests(unittest.TestCase):
         shop_id = catalog.get_shop(item['canteen'], item['shop'])['shop_id']
         other_id = self.connection.execute('SELECT shop_id FROM shops WHERE shop_id != ?', (shop_id,)).fetchone()[0]
         users.create_account('wrongshop', 'password123', 'Other shop', 'shop', other_id)
+        self.connection.execute("UPDATE users SET is_approved=1 WHERE role='shop'")
+        self.connection.commit()
         users.login('wrongshop', 'password123')
         self.assertEqual(shop_orders.read_orders(item['canteen'], item['shop']), [])
         self.assertEqual(shop_orders.read_items(order_id, item['canteen'], item['shop']), [])
         with self.assertRaises(ValueError):
             shop_orders.change_status(order_id, item['canteen'], item['shop'], 'awaiting_payment_review', 'paid')
         users.create_account('rightshop', 'password123', 'Right shop', 'shop', shop_id)
+        self.connection.execute("UPDATE users SET is_approved=1 WHERE role='shop'")
+        self.connection.commit()
         users.login('rightshop', 'password123')
         self.assertEqual(len(shop_orders.read_orders(item['canteen'], item['shop'])), 1)
         shop_orders.change_status(order_id, item['canteen'], item['shop'], 'awaiting_payment_review', 'paid')

@@ -18,6 +18,8 @@ class OrderCancellationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             orders.cancel_order(order_id)
         users.create_account('seller', 'password123', 'Seller', 'shop', 3)
+        self.connection.execute("UPDATE users SET is_approved=1 WHERE role='shop'")
+        self.connection.commit()
         users.login('seller', 'password123')
         with self.assertRaises(ValueError):
             shop_orders.change_status(order_id, 'คณะครุศาสตร์', 'ร้านน้ำผลไม้',
@@ -45,6 +47,8 @@ class OrderCancellationTests(unittest.TestCase):
     def test_shop_confirmation_first_blocks_customer_cancellation(self):
         order_id = self.make_order()
         users.create_account('seller', 'password123', 'Seller', 'shop', 3)
+        self.connection.execute("UPDATE users SET is_approved=1 WHERE role='shop'")
+        self.connection.commit()
         users.login('seller', 'password123')
         shop_orders.change_status(order_id, 'คณะครุศาสตร์', 'ร้านน้ำผลไม้', 'awaiting_payment_review', 'paid')
         users.login('tester', 'password123')

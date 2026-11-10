@@ -1,9 +1,10 @@
 import sqlite3
 
-from Backend import database, users
+from Backend import database, users, scheduling
 
 
 status_names = {
+    'expired': 'เลยเวลารับ — หมดอายุการแจ้งชำระ',
     'pending': 'ออเดอร์เก่า — ยังไม่ผ่านขั้นแจ้งชำระ',
     'awaiting_payment_review': 'รอตรวจสอบการชำระเงิน',
     'payment_rejected': 'หลักฐานชำระไม่ผ่าน',
@@ -24,6 +25,7 @@ next_statuses = {
 
 
 def read_orders(canteen_name, shop_name):
+    scheduling.refresh_overdue()
     user = users.require_user('shop')
     shop = users.get_my_shop()
     if (canteen_name, shop_name) != (shop['canteen_name'], shop['shop_name']):
@@ -43,6 +45,7 @@ def read_orders(canteen_name, shop_name):
 
 
 def read_items(order_id, canteen_name, shop_name):
+    scheduling.refresh_overdue()
     user = users.require_user('shop')
     shop = users.get_my_shop()
     if (canteen_name, shop_name) != (shop['canteen_name'], shop['shop_name']):
@@ -64,6 +67,7 @@ def read_items(order_id, canteen_name, shop_name):
 def change_status(order_id, canteen_name, shop_name, old_status, new_status):
     if new_status not in next_statuses.get(old_status, ()):
         raise ValueError('ไม่สามารถข้ามขั้นตอนหรือย้อนสถานะนี้ได้')
+    scheduling.refresh_overdue()
     user = users.require_user('shop')
     shop = users.get_my_shop()
     if (canteen_name, shop_name) != (shop['canteen_name'], shop['shop_name']):

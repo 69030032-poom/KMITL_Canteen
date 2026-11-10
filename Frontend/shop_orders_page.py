@@ -19,6 +19,8 @@ class ShopOrdersPage(AutoRefreshFrame):
         self.grid_columnconfigure(1,weight=3,uniform='orders')
         self.grid_rowconfigure(2,weight=1)
         self.heading=ctk.CTkLabel(self,text='',font=ctk.CTkFont(size=23,weight='bold'),text_color=TEXT)
+        from Frontend.shop_menu_page import ShopMenuPage
+        ctk.CTkButton(self,text='จัดการเมนู / เวลาร้าน',fg_color=ORANGE,command=lambda:ShopMenuPage(self)).grid(row=0,column=1,sticky='e',padx=12)
         self.heading.grid(row=0,column=0,columnspan=2,sticky='w',padx=12,pady=(4,12))
         self.filters=ctk.CTkSegmentedButton(self,values=['ทั้งหมด','รอตรวจชำระ','กำลังเตรียม','พร้อมรับ','รับแล้ว'],
             command=self.change_filter,selected_color=PEACH,selected_hover_color='#F5D5BF',unselected_color='white',unselected_hover_color=CREAM,text_color=TEXT,fg_color=BORDER,font=ctk.CTkFont(size=13))
@@ -48,7 +50,12 @@ class ShopOrdersPage(AutoRefreshFrame):
             shop=users.get_my_shop()
             self.canteen,self.shop=shop['canteen_name'],shop['shop_name']
             rows=shop_orders.read_orders(self.canteen,self.shop)
-        except (sqlite3.Error,ValueError):
+        except ValueError as error:
+            for area in (self.order_list,self.detail_body,self.actions):
+                for child in area.winfo_children(): child.destroy()
+            self.feedback.configure(text=str(error),text_color=ORANGE)
+            return False
+        except sqlite3.Error:
             self.feedback.configure(text='อ่านออเดอร์ไม่สำเร็จ กำลังลองใหม่',text_color=ORANGE)
             return False
         self.heading.configure(text=self.shop)
@@ -89,6 +96,7 @@ class ShopOrdersPage(AutoRefreshFrame):
         self.label(f'ออเดอร์ #{oid:04d}',True)
         self.label(f"ผู้รับ: {order['customer_name']}\nโทร: {order['phone']}\nรับ {order['pickup_date']} เวลา {order['pickup_time']}")
         status=order['status']
+        if order.get('is_overdue'): self.label('เลยเวลารับอาหาร — กรุณาติดต่อผู้รับ',True)
         self.label('สถานะ: '+shop_orders.status_names.get(status,status),True)
         ctk.CTkFrame(self.detail_body,height=1,fg_color=BORDER).pack(fill='x',pady=10)
         try:

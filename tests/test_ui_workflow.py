@@ -47,6 +47,8 @@ class UIWorkflowTests(unittest.TestCase):
         oid=orders.save_order(item['canteen'],item['shop'],[item],'Preview','0812345678',date,'12:30')
         sid=self.fixture.connection.execute("SELECT shop_id FROM shops WHERE name='ร้านครัวสิริ'").fetchone()[0]
         users.create_account('previewshop','password123','Shop','shop',sid)
+        self.fixture.connection.execute("UPDATE users SET is_approved=1 WHERE role='shop'")
+        self.fixture.connection.commit()
         self.fixture.connection.execute("UPDATE orders SET status='preparing' WHERE order_id=?",(oid,))
         self.fixture.connection.commit()
         self.app.show_login()

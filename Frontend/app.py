@@ -7,7 +7,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 from PIL import Image
 
-from Backend import cart, catalog, users
+from Backend import cart, catalog, users, database, scheduling
 from Frontend.theme import add_canteen_art
 from Frontend.login_page import LoginPage
 from Frontend.menu_page import MenuPage
@@ -25,6 +25,8 @@ class CanteenApp(ctk.CTk):
         icon_file = Path(__file__).resolve().parent.parent / "assets" / "app_icon" / "canteen_icon_v2.ico"
         if sys.platform == "win32" and icon_file.exists():
             self.iconbitmap(str(icon_file))
+        database.upgrade_database()
+        self.overdue_timer = self.after(1000, self.refresh_overdue)
         self.login_role = role
         self.title("KMITL Canteen")
         self.geometry("1240x720")
@@ -710,3 +712,16 @@ class CanteenApp(ctk.CTk):
         self.page_title_label.configure(text="คำสั่งซื้อและสถานะ")
         page = OrderHistoryPage(self.page_frame, self.show_canteens, order_id)
         page.pack(fill="x")
+
+    def refresh_overdue(self):
+        import sqlite3
+        try:
+            scheduling.refresh_overdue()
+        except sqlite3.Error:
+            pass
+        self.overdue_timer = self.after(30000, self.refresh_overdue)
+
+    def destroy(self):
+        if getattr(self,'overdue_timer',None):
+            self.after_cancel(self.overdue_timer)
+        super().destroy()

@@ -1,9 +1,16 @@
 import sqlite3
+from contextvars import ContextVar
 
 from Backend import database
 
 
+_transaction_connection = ContextVar('catalog_connection', default=None)
+
 def read_rows(sql, values=()):
+    if _transaction_connection.get() is not None:
+        cursor = _transaction_connection.get().execute(sql, values)
+        names = [column[0] for column in cursor.description]
+        return [dict(zip(names, row)) for row in cursor]
     connection = database.connect_database()
     connection.row_factory = sqlite3.Row
     try:

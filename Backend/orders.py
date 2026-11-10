@@ -1,4 +1,6 @@
 import json
+import uuid
+from Backend import scheduling
 from datetime import datetime
 
 from Backend import checkout, database, catalog, users
@@ -76,26 +78,34 @@ def insert_order_item(connection, order_id, item):
     connection.execute(sql, values)
 
 
-def save_order(canteen_name, shop_name, items, name, phone, pickup_date, pickup_time):
+def save_order(canteen_name, shop_name, items, name, phone, pickup_date, pickup_time, request_id=None):
     user = users.require_user('customer')
-    shop = catalog.get_shop(canteen_name, shop_name)
-    if shop is None:
-        raise ValueError('ไม่พบร้านอาหารนี้')
-    error = checkout.check_details(name, phone, pickup_date, pickup_time)
-    if error:
-        raise ValueError(error)
-    check_items(canteen_name, shop_name, items)
-    for item in items:
-        catalog.check_cart_item(item)
-
+    request_id = request_id or str(uuid.uuid4())
+    payload = json.dumps([canteen_name, shop_name, items, name, phone, pickup_date, pickup_time], ensure_ascii=False, sort_keys=True)
+    scheduling.refresh_overdue()
     connection = database.connect_database()
     try:
         with connection:
-            order_id = insert_order(
-                connection, canteen_name, shop_name, name, phone,
-                pickup_date, pickup_time, user['user_id'], shop['shop_id'],
-            )
-
+            connection.execute('BEGIN IMMEDIATE')
+            existing = connection.execute('SELECT order_id, request_payload FROM orders WHERE user_id=? AND request_id=?', (user['user_id'],request_id)).fetchone()
+            if existing:
+                if existing[1] != payload:
+                    raise ValueError('รหัสคำขอเดิมมีข้อมูลต่างกัน กรุณาเริ่มสั่งใหม่')
+                return existing[0]
+            token = catalog._transaction_connection.set(connection)
+            try:
+                shop = catalog.get_shop(canteen_name, shop_name)
+                error = checkout.check_details(name, phone, pickup_date, pickup_time)
+                if error:
+                    raise ValueError(error)
+                scheduling.check_slot(connection, shop, pickup_date, pickup_time)
+                check_items(canteen_name, shop_name, items)
+                for item in items:
+                    catalog.check_cart_item(item)
+            finally:
+                catalog._transaction_connection.reset(token)
+            order_id = insert_order(connection, canteen_name, shop_name, name, phone, pickup_date, pickup_time, user['user_id'], shop['shop_id'])
+            connection.execute('UPDATE orders SET request_id=?, request_payload=? WHERE order_id=?', (request_id,payload,order_id))
             for item in items:
                 insert_order_item(connection, order_id, item)
         return order_id

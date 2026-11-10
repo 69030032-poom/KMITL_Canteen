@@ -1,0 +1,2 @@
+# Include SQL scripts in GitHub's language statistics.
+*.sql linguist-detectable

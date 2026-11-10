@@ -54,6 +54,7 @@ class MenuPage(ctk.CTkFrame):
             self.cart_label.configure(text=f'ตะกร้าร้านนี้ · {quantity} ชิ้น   {total} บาท')
 
     def show_menu_list(self):
+        self.shop_id = catalog.get_shop(self.canteen_name,self.shop_name)['shop_id']
         self.menu_data = catalog.get_menu_data(self.canteen_name,self.shop_name)
         self.curry_shops,self.menus,self.shop_options,self.variants,self.item_options = self.menu_data
         for widget in self.menu_list.winfo_children():
@@ -79,7 +80,7 @@ class MenuPage(ctk.CTkFrame):
         self.menu_rows.append(row)
         row.grid(row=len(self.menu_rows)-1, column=0, sticky='ew', padx=4, pady=5)
         row.grid_columnconfigure(1, weight=1)
-        picture = get_menu_image(name, (100, 100))
+        picture = get_menu_image(name, (100, 100), self.shop_id)
         if picture:
             photo = ctk.CTkLabel(row, text='', image=picture, cursor='hand2')
             photo.image = picture
@@ -115,7 +116,7 @@ class MenuPage(ctk.CTkFrame):
         self.detail_title.configure(text='เลือกเมนู')
         summary=ctk.CTkFrame(self.details_area,fg_color='transparent')
         summary.pack(fill='x',pady=(0,8))
-        picture=get_menu_image(menu_name,(60,54))
+        picture=get_menu_image(menu_name,(60,54), self.shop_id)
         if picture:
             photo=ctk.CTkLabel(summary,text='',image=picture)
             photo.image=picture

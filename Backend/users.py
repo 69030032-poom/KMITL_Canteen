@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import secrets
 import sqlite3
+import time
 
 from Backend import database
 
@@ -99,13 +100,29 @@ def login(username, password):
     connection = database.connect_database()
     connection.row_factory = sqlite3.Row
     try:
-        user = connection.execute('SELECT * FROM users WHERE username = ?', (username.strip(),)).fetchone()
+        key = username.strip().lower()
+        with connection:
+            attempt = connection.execute('SELECT failures, locked_until FROM login_attempts WHERE username=?', (key,)).fetchone()
+            if attempt and attempt['locked_until'] > time.time():
+                raise ValueError('ลองรหัสผ่านผิดหลายครั้ง กรุณารอ 5 นาที')
+            user = connection.execute('SELECT * FROM users WHERE username = ?', (username.strip(),)).fetchone()
+            valid = user is not None and check_password(password, user['password_hash'])
+            if not valid:
+                failures = (attempt['failures'] if attempt else 0) + 1
+                locked = time.time() + 300 if failures >= 5 else 0
+                connection.execute('INSERT OR REPLACE INTO login_attempts VALUES (?, ?, ?)', (key, 0 if locked else failures, locked))
+            else:
+                connection.execute('DELETE FROM login_attempts WHERE username=?', (key,))
+        if not valid:
+            raise ValueError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
     finally:
         connection.close()
-    if user is None or not check_password(password, user['password_hash']):
-        raise ValueError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
     _current_user_id = user['user_id']
-    return require_user()
+    try:
+        return require_user()
+    except ValueError:
+        logout()
+        raise
 
 
 def logout():
@@ -120,13 +137,17 @@ def require_user(role=None):
     connection.row_factory = sqlite3.Row
     try:
         user = connection.execute('''
-            SELECT user_id, username, display_name, role, shop_id
+            SELECT user_id, username, display_name, role, shop_id, is_approved, is_suspended
             FROM users WHERE user_id = ?
         ''', (_current_user_id,)).fetchone()
     finally:
         connection.close()
     if user is None or (role is not None and user['role'] != role):
         raise ValueError('บัญชีนี้ไม่มีสิทธิ์ใช้งานส่วนนี้')
+    if user["is_suspended"]:
+        raise ValueError("บัญชีถูกระงับ กรุณาติดต่อผู้ดูแล")
+    if user["role"] == "shop" and not user["is_approved"]:
+        raise ValueError("บัญชีร้านค้ารอผู้ดูแลตรวจสอบและอนุมัติ")
     return dict(user)
 
 

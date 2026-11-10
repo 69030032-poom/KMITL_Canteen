@@ -213,7 +213,7 @@ class LoginPage(ctk.CTkFrame):
                 self.show_form(register=False)
                 self.username_entry.insert(0, username)
                 self.error_label.configure(
-                    text="สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ",
+                    text="ส่งคำขอแล้ว รอผู้ดูแลอนุมัติร้านค้า" if self.role == "shop" else "สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ",
                     text_color=SUCCESS,
                 )
                 return

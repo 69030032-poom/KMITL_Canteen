@@ -2,11 +2,12 @@ import sqlite3
 
 import customtkinter as ctk
 
-from Backend import catalog, users
+from Backend import catalog, users, database
 
 
 class ShopAccountWindow(ctk.CTk):
     def __init__(self):
+        database.upgrade_database()
         super().__init__()
         self.title('สร้างบัญชีร้าน — ผู้ดูแลเครื่อง')
         self.geometry('620x650')
@@ -74,4 +75,4 @@ class ShopAccountWindow(ctk.CTk):
         else:
             self.password_entry.delete(0, 'end')
             self.confirm_entry.delete(0, 'end')
-            self.message_label.configure(text='สร้างบัญชีสำเร็จ กลับไปเข้าสู่ระบบในแอป KMITL Canteen ได้เลย')
+            self.message_label.configure(text='ส่งคำขอสำเร็จ กรุณารอผู้ดูแลตรวจสอบและอนุมัติ')

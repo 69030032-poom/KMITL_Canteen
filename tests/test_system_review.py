@@ -21,6 +21,8 @@ class SystemReviewTests(unittest.TestCase):
     def test_rename_keeps_history_and_status_permissions(self):
         oid = self.make_order()
         users.create_account('seller','password123','Seller','shop',3)
+        self.connection.execute("UPDATE users SET is_approved=1 WHERE role='shop'")
+        self.connection.commit()
         users.login('seller','password123')
         self.connection.execute("UPDATE shops SET name='New shop name' WHERE shop_id=3")
         self.connection.commit()

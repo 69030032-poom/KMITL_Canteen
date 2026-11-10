@@ -94,6 +94,8 @@ class OrderHistoryPage(AutoRefreshFrame):
         self.add_text(f"{order['canteen_name']} / {order['shop_name']}", size=16, bold=True, parent=card, pady=3)
         self.add_text(f"ผู้รับ: {order['customer_name']}\nวันที่รับ {order['pickup_date']} เวลา {order['pickup_time']}", size=15, parent=card, pady=5)
         status = status_names.get(order['status'], order['status'])
+        if order.get('is_overdue'):
+            self.add_text('เลยเวลารับอาหาร กรุณาติดต่อร้าน',parent=card,color=ORANGE)
         self.add_text("สถานะ: " + status, size=15, bold=True, color=ORANGE, parent=card, pady=5)
         if order['status'] == 'payment_rejected':
             self.add_text('กรุณาติดต่อร้านเพื่อตรวจสอบยอดที่แจ้งชำระ อย่าโอนซ้ำก่อนตรวจสอบ', size=14, color="#C0392B", parent=card)
@@ -102,7 +104,7 @@ class OrderHistoryPage(AutoRefreshFrame):
             ctk.CTkButton(card, text='ยกเลิกคำสั่งซื้อ', height=38,
                 fg_color='#FCE6D7', text_color='#9E3210', hover_color='#F5D5BF',
                 command=partial(self.cancel_order, order_id)).pack(anchor='w', padx=18, pady=8)
-        elif order['status'] == 'cancelled':
+        elif order['status'] in ('cancelled','expired'):
             self.add_text('หากโอนเงินแล้ว กรุณาติดต่อร้านเพื่อตรวจสอบและขอคืนเงิน ระบบไม่คืนเงินอัตโนมัติ',
                           size=14, color='#9A5B00', parent=card)
         self.add_text("รายการอาหาร", size=17, bold=True, parent=card, pady=(12, 4))

@@ -58,7 +58,18 @@ def load_menu_picture(name, size):
         return ImageOps.fit(picture, size, method=Image.Resampling.LANCZOS)
 
 
-def get_menu_image(name, size=(240, 135)):
+def get_menu_image(name, size=(240, 135), shop_id=None):
+    if shop_id is not None:
+        from Backend import catalog, database
+        rows = catalog.read_rows('SELECT image_path FROM menu_items WHERE shop_id=? AND name=?', (shop_id,name))
+        if rows and rows[0]['image_path']:
+            path = database.database_file.parent / 'menu_images' / Path(rows[0]['image_path']).name
+            try:
+                with Image.open(path) as source:
+                    picture = ImageOps.fit(source.convert('RGB'),size)
+                return ctk.CTkImage(light_image=picture,dark_image=picture,size=size)
+            except OSError:
+                pass
     picture = load_menu_picture(name, size)
     if picture is None:
         return None
