@@ -7,3 +7,14 @@ outputs/backups/
 *.db-shm
 assets/payment_qr.png
 *.sqbpro
+
+outputs/menu_review/
+
+outputs/ui_preview/
+
+# Generated demos, packaged apps, documents and temporary build files
+outputs/
+
+# Merchant uploads and database backups remain local
+Database SQLite/menu_images/
+Database SQLite/backups/

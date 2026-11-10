@@ -19,9 +19,10 @@ SUCCESS = "#237A45"
 
 
 class LoginPage(ctk.CTkFrame):
-    def __init__(self, parent, on_login):
+    def __init__(self, parent, on_login, role="customer"):
         super().__init__(parent, fg_color="transparent")
         self.on_login = on_login
+        self.role = role
         self.register = False
         self._build_layout()
         self.show_form()
@@ -81,16 +82,25 @@ class LoginPage(ctk.CTkFrame):
         entry.pack(fill="x")
         return entry
 
+    def choose_role(self, value):
+        self.role = 'shop' if value == 'ร้านค้า' else 'customer'
+        self.show_form()
+
     def show_form(self, register=False):
         for widget in self.form_content.winfo_children():
             widget.destroy()
 
         self.register = register
-        title = "สร้างบัญชีใหม่" if register else "เข้าสู่ระบบ"
-        subtitle = (
-            "สมัครสมาชิกเพื่อเริ่มสั่งอาหารจากร้านโปรด"
-            if register else "เข้าสู่ระบบเพื่อสั่งอาหารได้สะดวกยิ่งขึ้น"
+        self.role_picker = ctk.CTkSegmentedButton(
+            self.form_content, values=['ลูกค้า', 'ร้านค้า'], command=self.choose_role,
+            selected_color=ORANGE, selected_hover_color=ORANGE_HOVER,
         )
+        self.role_picker.set('ร้านค้า' if self.role == 'shop' else 'ลูกค้า')
+        self.role_picker.pack(fill='x', pady=(0, 12))
+        title = "สร้างบัญชีใหม่" if register else ("เข้าสู่ระบบร้านค้า" if self.role == "shop" else "เข้าสู่ระบบลูกค้า")
+        subtitle = ("สมัครสมาชิกเพื่อเริ่มสั่งอาหารจากร้านโปรด" if register and self.role == 'customer'
+                    else "สร้างบัญชีร้านค้าและเลือกร้านที่บัญชีนี้จะดูแล" if register
+                    else "เข้าสู่ระบบเพื่อสั่งอาหารได้สะดวกยิ่งขึ้น")
 
         ctk.CTkLabel(
             self.form_content,
@@ -119,6 +129,24 @@ class LoginPage(ctk.CTkFrame):
             self.name_entry = self._make_entry(
                 self.form_content, "ชื่อที่แสดงในแอป", "ชื่อของคุณ"
             )
+            if self.role == 'shop':
+                self.shop_choices = {}
+                try:
+                    for shop in users.get_active_shops():
+                        label = f"{shop['canteen_name']} / {shop['shop_name']}"
+                        self.shop_choices[label] = shop['shop_id']
+                except sqlite3.Error:
+                    self.shop_choices = {}
+                ctk.CTkLabel(self.form_content, text='เลือกร้านค้า', text_color=TEXT,
+                             font=ctk.CTkFont(size=13, weight='bold')).pack(fill='x', pady=(10, 4))
+                options = list(self.shop_choices) or ['ยังไม่มีร้านที่เปิดใช้งาน']
+                self.shop_menu = ctk.CTkOptionMenu(self.form_content, values=options)
+                self.shop_menu.pack(fill='x')
+                if not self.shop_choices:
+                    self.shop_menu.configure(state='disabled')
+                ctk.CTkLabel(self.form_content,
+                             text='ต้นแบบนี้ยังไม่มีขั้นตอนตรวจสอบว่าเป็นเจ้าของร้านจริง',
+                             text_color=MUTED, wraplength=420).pack(pady=(5, 0))
 
         self.error_label = ctk.CTkLabel(
             self.form_content,
@@ -175,16 +203,26 @@ class LoginPage(ctk.CTkFrame):
             if self.register:
                 if password != self.confirm_entry.get():
                     raise ValueError("รหัสผ่านทั้งสองช่องไม่ตรงกัน")
-                users.register_customer(username, password, self.name_entry.get().strip())
+                if self.role == 'shop':
+                    shop_id = self.shop_choices.get(self.shop_menu.get())
+                    if shop_id is None:
+                        raise ValueError('ไม่มีร้านที่เปิดใช้งานให้เลือก')
+                    users.register_shop(username, password, self.name_entry.get().strip(), shop_id)
+                else:
+                    users.register_customer(username, password, self.name_entry.get().strip())
                 self.show_form(register=False)
                 self.username_entry.insert(0, username)
                 self.error_label.configure(
-                    text="สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ",
+                    text="ส่งคำขอแล้ว รอผู้ดูแลอนุมัติร้านค้า" if self.role == "shop" else "สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ",
                     text_color=SUCCESS,
                 )
                 return
 
             user = users.login(username, password)
+            if user['role'] != self.role:
+                users.logout()
+                raise ValueError('บัญชีนี้เป็นบัญชีร้านค้า กรุณาเลือกฝั่งร้านค้า' if user['role'] == 'shop'
+                                 else 'บัญชีนี้เป็นบัญชีลูกค้า กรุณาเลือกฝั่งลูกค้า')
         except ValueError as error:
             self.error_label.configure(text=str(error), text_color=ERROR)
         except sqlite3.Error as error:

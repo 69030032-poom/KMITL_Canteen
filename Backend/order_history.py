@@ -1,9 +1,10 @@
 import sqlite3
 
-from Backend import database, users
+from Backend import database, users, scheduling
 
 
 def read_orders():
+    scheduling.refresh_overdue()
     user = users.require_user('customer')
     connection = database.connect_database()
     connection.row_factory = sqlite3.Row
@@ -20,6 +21,7 @@ def read_orders():
 
 
 def read_details(order_id):
+    scheduling.refresh_overdue()
     user = users.require_user('customer')
     connection = database.connect_database()
     connection.row_factory = sqlite3.Row

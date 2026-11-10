@@ -1,7 +1,7 @@
 
 
 def check_selection(shop_name, dish_count, selected_dishes, menu_data):
-    curry_shops, menus, shop_options = menu_data
+    curry_shops, menus, shop_options, variants, item_options = menu_data
     shop = curry_shops[shop_name]
     if dish_count not in shop["prices"]:
         return "กรุณาเลือกราด 1 อย่าง หรือ 2 อย่าง"
@@ -16,16 +16,30 @@ def check_selection(shop_name, dish_count, selected_dishes, menu_data):
 
 
 def calculate_price(shop_name, menu_name, dish_count=1, extra_rice=False, selected_options=None, *, menu_data):
-    curry_shops, menus, shop_options = menu_data
+    curry_shops, menus, shop_options, variants, item_options = menu_data
     # คืนราคาต่อหนึ่งจาน ส่วนจำนวนจานให้ตะกร้าคำนวณ
-    if shop_name in curry_shops:
+    if shop_name in curry_shops and menu_name not in menus[shop_name]:
         shop = curry_shops[shop_name]
         price = shop["prices"][dish_count]
         if extra_rice:
             price += shop["extra_rice_price"]
         return price
     price = menus[shop_name][menu_name]
+    option_groups = get_option_groups(shop_name, menu_name, menu_data)
     if selected_options:
         for group_name, choice in selected_options.items():
-            price += shop_options[shop_name][group_name][choice]
+            price += option_groups[group_name][choice]
     return price
+
+
+def get_option_groups(shop_name, menu_name, menu_data):
+    curry_shops, menus, shop_options, variants, item_options = menu_data
+    groups = dict(shop_options.get(shop_name, {}))
+    groups.update(item_options.get(menu_name, {}))
+    if menu_name in variants:
+        base_price = menus[shop_name][menu_name]
+        groups['รูปแบบ'] = {
+            name: price - base_price
+            for name, price in variants[menu_name].items()
+        }
+    return groups

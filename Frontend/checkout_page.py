@@ -1,9 +1,12 @@
+from Backend import scheduling
+import uuid
 import sqlite3
 
 import customtkinter as ctk
 
 from Backend import cart, checkout, orders, catalog
 from Frontend.date_picker import DatePicker
+from Frontend.theme import ORANGE, ORANGE_HOVER, TEXT, PEACH, BORDER
 from Frontend.payment_page import PaymentPage
 
 
@@ -11,6 +14,7 @@ class CheckoutPage(ctk.CTkFrame):
     def __init__(self, parent, canteen_name, shop_name, items, go_back, on_saved):
         super().__init__(parent, fg_color="transparent")
 
+        self.request_id = str(uuid.uuid4())
         self.canteen_name = canteen_name
         self.shop_name = shop_name
         self.items = items
@@ -47,7 +51,7 @@ class CheckoutPage(ctk.CTkFrame):
         review_button = ctk.CTkButton(
             self.form_frame,
             text="ตรวจรายการก่อนสั่ง", height=42, width=260, corner_radius=10,
-            fg_color="#F45B2A", hover_color="#DF4B20", font=ctk.CTkFont(size=15, weight="bold"),
+            fg_color="#C94716", hover_color="#A93810", font=ctk.CTkFont(size=15, weight="bold"),
             command=self.check_form,
         )
         review_button.pack(pady=(8, 6))
@@ -65,7 +69,7 @@ class CheckoutPage(ctk.CTkFrame):
         date_label.pack(pady=(8, 0))
         self.date_button = ctk.CTkButton(
             self.form_frame, text="เลือกวันจากปฏิทิน", width=400, height=40, corner_radius=9, font=ctk.CTkFont(size=14),
-            command=self.open_calendar,
+            command=self.open_calendar, fg_color=PEACH, hover_color="#F5D5BF", text_color=TEXT, border_width=1, border_color=BORDER,
         )
         self.date_button.pack(pady=4)
 
@@ -73,12 +77,14 @@ class CheckoutPage(ctk.CTkFrame):
         time_label.pack(pady=(8, 0))
         time_frame = ctk.CTkFrame(self.form_frame, fg_color="transparent")
         time_frame.pack(pady=4)
-        hours = [f"{hour:02d}" for hour in range(24)]
+        shop = catalog.get_shop(self.canteen_name,self.shop_name)
+        ctk.CTkLabel(self.form_frame,text=f"รับอาหาร {shop['opening_time']}–{shop['closing_time']} • {shop['slot_capacity']} ออเดอร์ / 15 นาที",text_color=TEXT).pack(pady=4)
+        hours = [f"{hour:02d}" for hour in range(int(shop['opening_time'][:2]),int(shop['closing_time'][:2])+1)]
         minutes = [f"{minute:02d}" for minute in range(60)]
-        self.hour_menu = ctk.CTkOptionMenu(time_frame, values=hours, width=180, height=38, font=ctk.CTkFont(size=14))
+        self.hour_menu = ctk.CTkOptionMenu(time_frame, values=hours, fg_color=PEACH, button_color=ORANGE, button_hover_color=ORANGE_HOVER, text_color=TEXT, dropdown_fg_color="white", dropdown_text_color=TEXT, dropdown_hover_color=PEACH, width=180, height=38, font=ctk.CTkFont(size=14))
         self.hour_menu.set("ชั่วโมง")
         self.hour_menu.pack(side="left", padx=4)
-        self.minute_menu = ctk.CTkOptionMenu(time_frame, values=minutes, width=180, height=38, font=ctk.CTkFont(size=14))
+        self.minute_menu = ctk.CTkOptionMenu(time_frame, values=minutes, fg_color=PEACH, button_color=ORANGE, button_hover_color=ORANGE_HOVER, text_color=TEXT, dropdown_fg_color="white", dropdown_text_color=TEXT, dropdown_hover_color=PEACH, width=180, height=38, font=ctk.CTkFont(size=14))
         self.minute_menu.set("นาที")
         self.minute_menu.pack(side="left", padx=4)
 
@@ -129,6 +135,11 @@ class CheckoutPage(ctk.CTkFrame):
         if error:
             return
 
+        try:
+            scheduling.check_available(self.canteen_name,self.shop_name,pickup_date,pickup_time)
+        except (ValueError,sqlite3.Error) as error:
+            self.error_label.configure(text=str(error))
+            return
         self.show_review(name, phone, pickup_date, pickup_time)
 
     # 3. แสดงข้อมูลที่ผ่านการตรวจ พร้อมอาหารและยอดรวม
@@ -155,7 +166,7 @@ class CheckoutPage(ctk.CTkFrame):
         self.save_error_label.pack(pady=10)
         self.confirm_button = ctk.CTkButton(
             self.review_frame, text="ไปหน้าชำระเงิน", width=260, height=42, corner_radius=10,
-            fg_color="#F45B2A", hover_color="#DF4B20", font=ctk.CTkFont(size=15, weight="bold"), command=self.show_payment,
+            fg_color="#C94716", hover_color="#A93810", font=ctk.CTkFont(size=15, weight="bold"), command=self.show_payment,
         )
         self.confirm_button.pack(pady=(10, 6))
 
@@ -204,7 +215,7 @@ class CheckoutPage(ctk.CTkFrame):
         self.payment_page.report_button.configure(state="disabled")
         try:
             self.order_id = orders.save_order(
-                self.canteen_name, self.shop_name, self.items, *self.order_details,
+                self.canteen_name, self.shop_name, self.items, *self.order_details, request_id=self.request_id,
             )
         except ValueError as error:
             self.payment_page.show_error(str(error))

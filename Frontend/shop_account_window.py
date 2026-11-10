@@ -2,11 +2,12 @@ import sqlite3
 
 import customtkinter as ctk
 
-from Backend import catalog, users
+from Backend import catalog, users, database
 
 
 class ShopAccountWindow(ctk.CTk):
     def __init__(self):
+        database.upgrade_database()
         super().__init__()
         self.title('สร้างบัญชีร้าน — ผู้ดูแลเครื่อง')
         self.geometry('620x650')
@@ -18,7 +19,7 @@ class ShopAccountWindow(ctk.CTk):
         try:
             shops = catalog.read_rows('''
                 SELECT shops.shop_id, canteens.name AS canteen, shops.name AS shop
-                FROM shops JOIN canteens USING(canteen_id) ORDER BY shops.shop_id
+                FROM shops JOIN canteens USING(canteen_id) WHERE shops.is_active=1 ORDER BY shops.shop_id
             ''')
             for shop in shops:
                 label = f"{shop['shop_id']}: {shop['canteen']} / {shop['shop']}"
@@ -74,4 +75,4 @@ class ShopAccountWindow(ctk.CTk):
         else:
             self.password_entry.delete(0, 'end')
             self.confirm_entry.delete(0, 'end')
-            self.message_label.configure(text='สร้างบัญชีสำเร็จ กลับไปเข้าสู่ระบบในแอป KMITL Canteen ได้เลย')
+            self.message_label.configure(text='ส่งคำขอสำเร็จ กรุณารอผู้ดูแลตรวจสอบและอนุมัติ')

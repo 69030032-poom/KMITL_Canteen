@@ -21,6 +21,7 @@ class CatalogTests(unittest.TestCase):
             return connection
         self.patcher = patch.object(database, 'connect_database', connect)
         self.patcher.start()
+        database.upgrade_database()
         users.register_customer('tester', 'password123', 'Test')
         users.login('tester', 'password123')
 

@@ -5,6 +5,7 @@ from functools import partial
 import customtkinter as ctk
 
 from Backend.checkout import THAI_TIME
+from Frontend.theme import ORANGE, ORANGE_HOVER, TEXT, MUTED, PEACH, BORDER
 
 
 class DatePicker(ctk.CTkToplevel):
@@ -23,22 +24,24 @@ class DatePicker(ctk.CTkToplevel):
         self.year = start_date.year
         self.month = start_date.month
 
+        ctk.CTkLabel(self,text='วันที่รับอาหาร',font=ctk.CTkFont(size=22,weight='bold'),text_color=TEXT).pack(anchor='w',padx=22,pady=(22,4))
+        ctk.CTkLabel(self,text='เลือกวันที่สะดวกมารับที่ร้าน',text_color=MUTED).pack(anchor='w',padx=22)
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.pack(fill="x", padx=12, pady=12)
         self.previous_button = ctk.CTkButton(
             header, text="‹", width=40, command=partial(self.change_month, -1),
-            fg_color="#F45B2A", hover_color="#DF4B20", text_color="#FFFFFF",
+            fg_color=PEACH, hover_color="#F5D5BF", text_color=TEXT,
         )
         self.previous_button.pack(side="left")
-        self.month_label = ctk.CTkLabel(header, text="", width=230)
+        self.month_label = ctk.CTkLabel(header, text="", width=230, font=ctk.CTkFont(size=17,weight="bold"), text_color=TEXT)
         self.month_label.pack(side="left", padx=8)
         next_button = ctk.CTkButton(
             header, text="›", width=40, command=partial(self.change_month, 1),
-            fg_color="#F45B2A", hover_color="#DF4B20", text_color="#FFFFFF",
+            fg_color=PEACH, hover_color="#F5D5BF", text_color=TEXT,
         )
         next_button.pack(side="right")
 
-        self.days_frame = ctk.CTkFrame(self)
+        self.days_frame = ctk.CTkFrame(self,fg_color="white")
         self.days_frame.pack(padx=12, pady=8)
         cancel_button = ctk.CTkButton(
             self, text="ยกเลิก", command=self.destroy,
@@ -47,9 +50,17 @@ class DatePicker(ctk.CTkToplevel):
         )
         cancel_button.pack(pady=12)
         self.show_month()
-        self.after(100, self.focus_calendar)
+        self.focus_timer = self.after(100, self.focus_calendar)
+        self.bind("<Escape>", lambda event: self.destroy())
+
+    def destroy(self):
+        if getattr(self,"focus_timer",None):
+            self.after_cancel(self.focus_timer)
+            self.focus_timer=None
+        super().destroy()
 
     def focus_calendar(self):
+        self.focus_timer=None
         self.grab_set()
         self.focus_force()
 
@@ -90,14 +101,16 @@ class DatePicker(ctk.CTkToplevel):
                 button = ctk.CTkButton(
                     self.days_frame, text=str(day), width=40, height=36,
                     command=partial(self.select_date, day_date),
-                    fg_color="#F45B2A", hover_color="#DF4B20",
-                    text_color="#FFFFFF", corner_radius=8,
+                    fg_color="white", hover_color=PEACH,
+                    text_color=TEXT, text_color_disabled="#B9B0A8", corner_radius=10,
                 )
                 button.grid(row=row, column=column, padx=4, pady=4)
                 if day_date < today:
                     button.configure(state="disabled")
                 if day_date == self.selected_date:
-                    button.configure(border_width=2, border_color="#242424")
+                    button.configure(fg_color=ORANGE, text_color="white", hover_color=ORANGE_HOVER)
+                elif day_date == today:
+                    button.configure(border_width=1, border_color=ORANGE, text_color=ORANGE)
 
     def select_date(self, selected_date):
         # ตรวจอีกครั้ง เผื่อเปิดปฏิทินค้างข้ามวัน
