@@ -4,7 +4,7 @@ Python Desktop App สำหรับสั่งอาหารล่วงห�
 
 ## ดาวน์โหลดแอป Demo (Windows)
 
-[เปิดโฟลเดอร์ Demo และวิธีใช้งาน](Demo/README.md) — ดาวน์โหลด ZIP แตกไฟล์ แล้วเปิด `TEST_Demo_001.exe` ได้โดยไม่ต้องติดตั้ง Python
+[เปิดโฟลเดอร์ Demo และวิธีใช้งาน](https://github.com/69030099-Thanapon/KMITL_Canteen/tree/main/Demo) — ดาวน์โหลด ZIP แตกไฟล์ แล้วเปิด `TEST_Demo_001.exe` ได้โดยไม่ต้องติดตั้ง Python
 
 ## วิธีทำงานที่ตกลงกัน (14 ตุลาคม 2026)
 
