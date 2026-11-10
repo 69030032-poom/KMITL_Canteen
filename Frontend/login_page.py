@@ -90,8 +90,6 @@ class LoginPage(ctk.CTkFrame):
         for widget in self.form_content.winfo_children():
             widget.destroy()
 
-        if self.role == 'shop':
-            register = False
         self.register = register
         self.role_picker = ctk.CTkSegmentedButton(
             self.form_content, values=['ลูกค้า', 'ร้านค้า'], command=self.choose_role,
@@ -100,10 +98,9 @@ class LoginPage(ctk.CTkFrame):
         self.role_picker.set('ร้านค้า' if self.role == 'shop' else 'ลูกค้า')
         self.role_picker.pack(fill='x', pady=(0, 12))
         title = "สร้างบัญชีใหม่" if register else ("เข้าสู่ระบบร้านค้า" if self.role == "shop" else "เข้าสู่ระบบลูกค้า")
-        subtitle = (
-            "สมัครสมาชิกเพื่อเริ่มสั่งอาหารจากร้านโปรด"
-            if register else "เข้าสู่ระบบเพื่อสั่งอาหารได้สะดวกยิ่งขึ้น"
-        )
+        subtitle = ("สมัครสมาชิกเพื่อเริ่มสั่งอาหารจากร้านโปรด" if register and self.role == 'customer'
+                    else "สร้างบัญชีร้านค้าและเลือกร้านที่บัญชีนี้จะดูแล" if register
+                    else "เข้าสู่ระบบเพื่อสั่งอาหารได้สะดวกยิ่งขึ้น")
 
         ctk.CTkLabel(
             self.form_content,
@@ -132,6 +129,24 @@ class LoginPage(ctk.CTkFrame):
             self.name_entry = self._make_entry(
                 self.form_content, "ชื่อที่แสดงในแอป", "ชื่อของคุณ"
             )
+            if self.role == 'shop':
+                self.shop_choices = {}
+                try:
+                    for shop in users.get_active_shops():
+                        label = f"{shop['canteen_name']} / {shop['shop_name']}"
+                        self.shop_choices[label] = shop['shop_id']
+                except sqlite3.Error:
+                    self.shop_choices = {}
+                ctk.CTkLabel(self.form_content, text='เลือกร้านค้า', text_color=TEXT,
+                             font=ctk.CTkFont(size=13, weight='bold')).pack(fill='x', pady=(10, 4))
+                options = list(self.shop_choices) or ['ยังไม่มีร้านที่เปิดใช้งาน']
+                self.shop_menu = ctk.CTkOptionMenu(self.form_content, values=options)
+                self.shop_menu.pack(fill='x')
+                if not self.shop_choices:
+                    self.shop_menu.configure(state='disabled')
+                ctk.CTkLabel(self.form_content,
+                             text='ต้นแบบนี้ยังไม่มีขั้นตอนตรวจสอบว่าเป็นเจ้าของร้านจริง',
+                             text_color=MUTED, wraplength=420).pack(pady=(5, 0))
 
         self.error_label = ctk.CTkLabel(
             self.form_content,
@@ -169,11 +184,7 @@ class LoginPage(ctk.CTkFrame):
             text_color=ORANGE,
             font=ctk.CTkFont(size=13, weight="bold"),
         )
-        if self.role == 'customer':
-            self.switch_button.pack(fill="x")
-        else:
-            ctk.CTkLabel(self.form_content, text='ใช้บัญชีร้านค้าที่ผู้ดูแลสร้างและผูกกับร้านไว้',
-                         text_color=MUTED).pack(pady=6)
+        self.switch_button.pack(fill="x")
 
         self.username_entry.bind("<Return>", lambda _event: self.password_entry.focus_set())
         self.password_entry.bind("<Return>", lambda _event: self.submit())
@@ -192,7 +203,13 @@ class LoginPage(ctk.CTkFrame):
             if self.register:
                 if password != self.confirm_entry.get():
                     raise ValueError("รหัสผ่านทั้งสองช่องไม่ตรงกัน")
-                users.register_customer(username, password, self.name_entry.get().strip())
+                if self.role == 'shop':
+                    shop_id = self.shop_choices.get(self.shop_menu.get())
+                    if shop_id is None:
+                        raise ValueError('ไม่มีร้านที่เปิดใช้งานให้เลือก')
+                    users.register_shop(username, password, self.name_entry.get().strip(), shop_id)
+                else:
+                    users.register_customer(username, password, self.name_entry.get().strip())
                 self.show_form(register=False)
                 self.username_entry.insert(0, username)
                 self.error_label.configure(

@@ -58,6 +58,41 @@ def register_customer(username, password, display_name):
     return create_account(username, password, display_name, 'customer')
 
 
+def get_active_shops():
+    connection = database.connect_database()
+    connection.row_factory = sqlite3.Row
+    try:
+        rows = connection.execute('''
+            SELECT shops.shop_id, canteens.name AS canteen_name, shops.name AS shop_name
+            FROM shops JOIN canteens USING(canteen_id)
+            WHERE shops.is_active = 1
+            ORDER BY canteens.canteen_id, shops.shop_id
+        ''').fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
+def register_shop(username, password, display_name, shop_id):
+    try:
+        shop_id = int(shop_id)
+    except (TypeError, ValueError) as error:
+        raise ValueError('กรุณาเลือกร้านค้า') from error
+
+    connection = database.connect_database()
+    try:
+        shop = connection.execute(
+            'SELECT shop_id FROM shops WHERE shop_id = ? AND is_active = 1',
+            (shop_id,),
+        ).fetchone()
+        if shop is None:
+            raise ValueError('ไม่พบร้านที่เลือก หรือร้านนี้ปิดใช้งานแล้ว')
+    finally:
+        connection.close()
+
+    return create_account(username, password, display_name, 'shop', shop_id)
+
+
 def login(username, password):
     global _current_user_id
     logout()
